@@ -107,3 +107,28 @@ canvas.checker {
 }
 
 #pixel-readout { color: var(--accent); min-height: 1.4em; }
+
+#export-box {
+  margin-top: 20px;
+  padding-top: 4px;
+  border-top: 1px solid var(--border);
+}
+#export-controls {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin: 8px 0;
+}
+#export-controls input {
+  width: 72px;
+  background: var(--panel);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 4px 6px;
+  font: inherit;
+}
+#range-status { min-height: 1.4em; margin: 4px 0 0; }
+#range-status.ok { color: var(--ok); }
+#range-status.warn { color: var(--error); }

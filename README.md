@@ -17,7 +17,7 @@ docker compose up        # http://localhost:8080
 ## 测试
 
 ```bash
-npm test                 # node --test tests/（44 个用例，无外部依赖）
+npm test                 # node --test tests/（54 个用例，无外部依赖）
 ```
 
 ## 约束（载入即校验，违反即报错，绝不回退为静态图静默显示）
@@ -63,6 +63,7 @@ site/                 # 纯静态页面，零依赖 ES modules
   js/png-decode.js    # inflate + 行滤波还原
   js/compositor.js    # SOURCE/OVER 混合、NONE/BACKGROUND/PREVIOUS 清理
   js/png-encode.js    # 合成帧 → PNG（下载）
+  js/export-range.js  # 动画选段导出：烘焙全画布帧 + 重新导入自检
   js/sample.js        # 内置示例 APNG 生成
 tests/                # node:test 单元 + 集成测试
 ```

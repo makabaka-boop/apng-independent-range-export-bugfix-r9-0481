@@ -86,6 +86,20 @@
       </div>
       <p id="pixel-readout" class="mono"></p>
       <p class="note">帧状态在载入时一次性预计算，前进 / 后退 / 任意跳转读取同一组快照，任何访问顺序像素都一致。</p>
+
+      <section id="export-box">
+        <h2>导出动画选段</h2>
+        <p class="note">
+          按动画帧编号（1 起）选择闭区间，默认静态海报不计入编号。选段每帧导出为完整合成画布，
+          不依赖选段之前的历史；延迟与循环次数保留。下载的 APNG 可重新拖入本页复核。
+        </p>
+        <div id="export-controls">
+          <label>起始帧 <input type="number" id="range-first" min="1" value="1"></label>
+          <label>结束帧 <input type="number" id="range-last" min="1" value="1"></label>
+          <button id="btn-export-range" type="button">下载选段 APNG</button>
+        </div>
+        <p id="range-status" class="mono" role="status"></p>
+      </section>
     </section>
   </section>
 </main>

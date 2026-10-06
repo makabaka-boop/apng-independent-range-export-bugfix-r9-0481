@@ -18,6 +18,8 @@ function resetUi() {
   $("#report").hidden = true;
   $("#static-box").hidden = true;
   $("#error-text").textContent = "";
+  $("#range-status").textContent = "";
+  $("#range-status").classList.remove("ok", "warn");
 }
 
 function showError(err) {
@@ -192,6 +194,11 @@ async function handleBytes(bytes, sourceName) {
       );
     }
     $("#frame-jump").max = anim.frames.length;
+    for (const el of [$("#range-first"), $("#range-last")]) {
+      el.max = anim.frames.length;
+    }
+    $("#range-first").value = 1;
+    $("#range-last").value = anim.frames.length;
     $("#report").hidden = false;
     showFrame(0);
   } catch (err) {
@@ -242,6 +249,35 @@ async function downloadCurrentFrame() {
   a.download = `frame-${String(i + 1).padStart(2, "0")}-composed.png`;
   a.click();
   URL.revokeObjectURL(url);
+}
+
+// 导出动画选段：只读 session.bytes，不触碰当前帧位置等导航状态；
+// 只有 exportRange 真正返回字节后才触发下载并提示成功——
+// 校验失败（非法范围 / 坏文件 / 超限 / 自检不符）只显示拒绝原因，绝不留下成功假象。
+async function exportSelectedRange() {
+  if (!session) return;
+  const status = $("#range-status");
+  status.textContent = "";
+  status.classList.remove("ok", "warn");
+  const first = Number($("#range-first").value);
+  const last = Number($("#range-last").value);
+  try {
+    const output = await exportRange(session.bytes, first, last);
+    const url = URL.createObjectURL(new Blob([output], { type: "image/png" }));
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `apng-frames-${first}-${last}.png`;
+    a.click();
+    URL.revokeObjectURL(url);
+    status.textContent =
+      `已导出第 ${first}–${last} 帧（${output.length} 字节）；` +
+      "下载文件可重新拖入本页复核";
+    status.classList.add("ok");
+  } catch (err) {
+    status.textContent = `拒绝导出：${err.message}`;
+    status.classList.add("warn");
+    if (!(err instanceof PngError)) console.error(err);
+  }
 }
 
 function init() {
@@ -295,32 +331,7 @@ function init() {
     if (e.key === "ArrowRight") showFrame(session.index + 1);
   });
   $("#btn-download").addEventListener("click", downloadCurrentFrame);
-  const controls = document.createElement("section");
-  controls.innerHTML =
-    '<label>动画起始帧 <input id="range-first" type="number" value="1" min="1"></label> <label>结束帧 <input id="range-last" type="number" value="2" min="1"></label> <button id="range-export">下载选段 APNG</button><output id="range-status"></output>';
-  document.body.append(controls);
-  $("#range-export").addEventListener("click", async () => {
-    if (!session) return;
-    const source = session;
-    try {
-      const output = await exportRange(
-        source.bytes,
-        Number($("#range-first").value) - 1,
-        Number($("#range-last").value) - 1,
-      );
-      const url = URL.createObjectURL(
-        new Blob([output], { type: "image/png" }),
-      );
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = "selected-animation.png";
-      link.click();
-      URL.revokeObjectURL(url);
-      $("#range-status").textContent = "导出完成";
-    } catch (error) {
-      $("#range-status").textContent = "拒绝导出：" + error.message;
-    }
-  });
+  $("#btn-export-range").addEventListener("click", exportSelectedRange);
 
   attachPixelReadout($("#canvas-before"));
   attachPixelReadout($("#canvas-display"));
