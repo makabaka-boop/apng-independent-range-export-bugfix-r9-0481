@@ -9,6 +9,16 @@ import { buildSampleApng } from "./sample.js";
 
 const $ = (sel) => document.querySelector(sel);
 
+// 断言导出前后源文件字节逐字节不变（导出是只读操作）。
+function assertUnchanged(before, after) {
+  if (before.length !== after.length)
+    throw new Error("导出意外改变了输入文件长度");
+  for (let i = 0; i < before.length; i++) {
+    if (before[i] !== after[i])
+      throw new Error(`导出意外修改了输入文件偏移 ${i} 处字节`);
+  }
+}
+
 // 当前会话：解析一次、预计算全部帧状态，导航只读取快照，保证任意访问顺序像素一致。
 let session = null;
 
@@ -18,6 +28,7 @@ function resetUi() {
   $("#report").hidden = true;
   $("#static-box").hidden = true;
   $("#error-text").textContent = "";
+  $("#range-status").textContent = "";
 }
 
 function showError(err) {
@@ -192,6 +203,12 @@ async function handleBytes(bytes, sourceName) {
       );
     }
     $("#frame-jump").max = anim.frames.length;
+    const rangeFirst = $("#range-first");
+    const rangeLast = $("#range-last");
+    rangeFirst.min = rangeLast.min = 1;
+    rangeFirst.max = rangeLast.max = anim.frames.length;
+    rangeFirst.value = rangeLast.value = 1;
+    $("#range-status").textContent = "";
     $("#report").hidden = false;
     showFrame(0);
   } catch (err) {
@@ -295,32 +312,55 @@ function init() {
     if (e.key === "ArrowRight") showFrame(session.index + 1);
   });
   $("#btn-download").addEventListener("click", downloadCurrentFrame);
-  const controls = document.createElement("section");
-  controls.innerHTML =
-    '<label>动画起始帧 <input id="range-first" type="number" value="1" min="1"></label> <label>结束帧 <input id="range-last" type="number" value="2" min="1"></label> <button id="range-export">下载选段 APNG</button><output id="range-status"></output>';
-  document.body.append(controls);
-  $("#range-export").addEventListener("click", async () => {
+
+  // 动画选段导出：只在成功导出时才创建下载；拒绝时只提示，绝不触发下载，
+  // 也不改变当前帧导航与输入字节。
+  const doRangeExport = async () => {
     if (!session) return;
-    const source = session;
+    const status = $("#range-status");
+    const rawFirst = Number($("#range-first").value);
+    const rawLast = Number($("#range-last").value);
+    if (!Number.isInteger(rawFirst) || !Number.isInteger(rawLast)) {
+      status.textContent = "拒绝导出：起止帧必须是 1–" + session.anim.frames.length + " 的整数";
+      status.dataset.ok = "0";
+      return;
+    }
+    const first = rawFirst - 1;
+    const last = rawLast - 1;
     try {
-      const output = await exportRange(
-        source.bytes,
-        Number($("#range-first").value) - 1,
-        Number($("#range-last").value) - 1,
-      );
+      const sourceBefore = session.bytes.slice();
+      const indexBefore = session.index;
+      const output = await exportRange(session.bytes, first, last);
+      // 导出不得改变输入字节，也不得移动当前查看的帧
+      assertUnchanged(sourceBefore, session.bytes);
+      if (session.index !== indexBefore)
+        throw new Error("导出意外改变了当前导航");
       const url = URL.createObjectURL(
         new Blob([output], { type: "image/png" }),
       );
       const link = document.createElement("a");
       link.href = url;
-      link.download = "selected-animation.png";
+      link.download = `frames-${first + 1}-${last + 1}.apng.png`;
       link.click();
       URL.revokeObjectURL(url);
-      $("#range-status").textContent = "导出完成";
+      status.textContent =
+        `导出完成：第 ${first + 1}–${last + 1} 帧，共 ${last - first + 1} 帧，` +
+        `${output.length} 字节，可重新拖入本页复核`;
+      status.dataset.ok = "1";
     } catch (error) {
-      $("#range-status").textContent = "拒绝导出：" + error.message;
+      status.textContent =
+        "拒绝导出：" +
+        (error instanceof PngError ? error.message : `未预期的错误：${error.message}`);
+      status.dataset.ok = "0";
+      if (!(error instanceof PngError)) console.error(error);
     }
-  });
+  };
+  $("#range-export").addEventListener("click", doRangeExport);
+  for (const id of ["#range-first", "#range-last"]) {
+    $(id).addEventListener("keydown", (e) => {
+      if (e.key === "Enter") doRangeExport();
+    });
+  }
 
   attachPixelReadout($("#canvas-before"));
   attachPixelReadout($("#canvas-display"));

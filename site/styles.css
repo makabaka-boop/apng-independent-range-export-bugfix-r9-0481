@@ -107,3 +107,30 @@ canvas.checker {
 }
 
 #pixel-readout { color: var(--accent); min-height: 1.4em; }
+
+#range-export-box {
+  margin-top: 24px;
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--panel);
+}
+#range-controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 8px;
+}
+#range-first, #range-last {
+  width: 64px;
+  background: var(--bg);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 4px 6px;
+  font: inherit;
+}
+#range-status { min-width: 1px; font-size: 12px; }
+#range-status[data-ok="1"] { color: var(--ok); }
+#range-status[data-ok="0"] { color: var(--error); }

@@ -22,13 +22,19 @@ function chunk(type, data) {
   return out;
 }
 
-// width/height：画布尺寸；rgba：width*height*4 字节。返回完整 PNG 文件字节。
-export async function encodePngRgba(width, height, rgba) {
+// RGBA 像素 → 每行前置滤波类型 0 的原始扫描行（供 deflate）。
+export function rawWithFilter0(width, height, rgba) {
   const stride = width * 4;
-  const raw = new Uint8Array(height * (stride + 1)); // 每行前置滤波类型 0
+  const raw = new Uint8Array(height * (stride + 1));
   for (let y = 0; y < height; y++) {
     raw.set(rgba.subarray(y * stride, (y + 1) * stride), y * (stride + 1) + 1);
   }
+  return raw;
+}
+
+// width/height：画布尺寸；rgba：width*height*4 字节。返回完整 PNG 文件字节。
+export async function encodePngRgba(width, height, rgba) {
+  const raw = rawWithFilter0(width, height, rgba);
   const ihdr = new Uint8Array(13);
   const dv = new DataView(ihdr.buffer);
   dv.setUint32(0, width);
